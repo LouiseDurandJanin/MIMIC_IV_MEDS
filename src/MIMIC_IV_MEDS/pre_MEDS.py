@@ -196,6 +196,25 @@ def fix_static_data(raw_static_df: pl.LazyFrame, death_times_df: pl.LazyFrame) -
     )
 
 
+
+def pick_exact_match(fps, input_dir: Path, pfx: str, suffixes=(".csv.gz", ".csv", ".parquet")) -> Path:
+    """
+    If get_supported_fp returns a list, pick the exact <pfx><suffix> inside input_dir.
+    Otherwise return the Path as-is.
+    """
+    # Try exact match for allowed suffixes, in priority order
+    for suf in suffixes:
+        exact = input_dir / f"{pfx}{suf}"
+        for cand in fps:
+            if Path(cand).resolve() == exact.resolve():
+                return Path(cand)
+
+    raise FileExistsError(
+        f"Ambiguous prefix {pfx}: {fps}. "
+        f"No exact match among {[str((input_dir / f'{pfx}{s}').resolve()) for s in suffixes]}"
+    )
+
+
 FUNCTIONS = {
     "hosp/diagnoses_icd": (add_discharge_time_by_hadm_id, ("hosp/admissions", ["hadm_id", "dischtime"])),
     "hosp/drgcodes": (add_discharge_time_by_hadm_id, ("hosp/admissions", ["hadm_id", "dischtime"])),
@@ -238,7 +257,8 @@ def main(input_dir: Path, output_dir: Path, do_overwrite: bool | None = None, do
         except FileNotFoundError:
             logger.info(f"Skipping {pfx} @ {str(in_fp.resolve())} as no compatible dataframe file was found.")
             continue
-
+        if isinstance(fp, list):
+            fp = pick_exact_match(fp, input_dir=input_dir, pfx=pfx)
         if fp.suffix in [".csv", ".csv.gz"]:
             read_fn = partial(read_fn, infer_schema_length=100000)
 
@@ -296,7 +316,8 @@ def main(input_dir: Path, output_dir: Path, do_overwrite: bool | None = None, do
         cols = list(fps_and_cols["cols"])
 
         df_to_load_fp, df_to_load_read_fn = get_supported_fp(input_dir, df_to_load_pfx)
-
+        if isinstance(df_to_load_fp, list):
+            df_to_load_fp = pick_exact_match(df_to_load_fp, input_dir=input_dir, pfx=df_to_load_pfx)
         st = datetime.now()
 
         logger.info(f"Loading {str(df_to_load_fp.resolve())} for manipulating other dataframes...")
@@ -323,6 +344,8 @@ def main(input_dir: Path, output_dir: Path, do_overwrite: bool | None = None, do
 
     for pfx, fn in ICD_DFS_TO_FIX:
         fp, read_fn = get_supported_fp(input_dir, pfx)
+        if isinstance(fp, list):
+            fp = pick_exact_match(fp, input_dir=input_dir, pfx=pfx)
         out_fp = output_dir / f"{pfx}.parquet"
 
         if out_fp.is_file():
