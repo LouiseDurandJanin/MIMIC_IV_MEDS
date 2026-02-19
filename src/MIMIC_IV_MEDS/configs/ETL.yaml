@@ -27,18 +27,20 @@ etl_metadata:
 
 stage_configs:
   shard_events:
-    infer_schema_length: 999999999
+    infer_schema_length: 10000
   split_and_shard_subjects:
-    n_subjects_per_shard: 1000
+    n_subjects_per_shard: 20000
 
 stages:
   - shard_events
   - split_and_shard_subjects
-  - convert_to_sharded_events
+  - convert_to_subject_sharded
+  - convert_to_MEDS_events
   - merge_to_MEDS_cohort
   - extract_code_metadata
   - finalize_MEDS_metadata
   - finalize_MEDS_data
+
 
 parallelize:
   n_workers: ${oc.env:N_WORKERS}
