@@ -57,7 +57,7 @@ def main(cfg: DictConfig):
         f"DATASET_VERSION={dataset_info.raw_dataset_version}:{PKG_VERSION}",
         f"EVENT_CONVERSION_CONFIG_FP={str(EVENT_CFG.resolve())}",
         f"PRE_MEDS_DIR={str(pre_MEDS_dir.resolve())}",
-        f"MEDS_COHORT_DIR={str(MEDS_output_dir.resolve())}",
+        f"MEDS_OUTPUT_DIR={str(MEDS_output_dir.resolve())}",
     ]
 
     # Then we construct the rest of the command
@@ -71,7 +71,7 @@ def main(cfg: DictConfig):
     overrides = []
 
     # Add output_dir as it's required by the pipeline
-    overrides.append(f"output_dir={str(MEDS_cohort_dir.resolve())}")
+    overrides.append(f"output_dir={str(MEDS_output_dir.resolve())}")
 
     if int(os.getenv("N_WORKERS", 1)) <= 1:
         logger.info("Running in serial mode as N_WORKERS is not set.")
